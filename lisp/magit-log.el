@@ -826,6 +826,8 @@ and `magit-log-auto-more' is non-nil."
     (forward-line -1)
     (magit-section-forward)))
 
+(defvar magit-log-follow-timer nil)
+
 (defun magit-log-maybe-show-commit (&optional section)
   "Automatically show commit at point in another window.
 If the section at point is a `commit' section and the value of
@@ -843,7 +845,17 @@ another window, using `magit-show-commit'."
                (magit-diff-auto-show-p 'blame-follow)
                (get-buffer-window magit-revision-buffer-name-format)
                (magit-blame-chunk-get :hash)))
-    (magit-show-commit it t)))
+    (when magit-log-follow-timer (cancel-timer magit-log-follow-timer))
+    (setq magit-log-follow-timer
+          (run-at-time 0.1 0.01
+                       `(lambda (buffer)
+                          (with-current-buffer buffer
+                            (unless (input-pending-p)
+                              (cancel-timer magit-log-follow-timer)
+                              (setq magit-log-follow-timer nil)
+                              (message "show %s" ,it)
+                              (magit-show-commit ,it t))))
+                       (current-buffer)))))
 
 (defun magit-log-goto-same-commit ()
   (--when-let
