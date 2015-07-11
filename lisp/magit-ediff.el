@@ -143,8 +143,33 @@ FILE has to be relative to the top directory of the repository."
               (run-hooks 'magit-ediff-quit-hook))))))
      'ediff-buffers3)))
 
+;; TODO merge this with the code in below interactive,
+;; probably put it into a new function which takes a
+;; DWIM argument to control whether confirmation is
+;; required.
+;; TODO generalizing this further and using it for
+;; regular diff
+;; (--if-let (magit-region-values 'commit 'branch)
+;;     (setq revA (car (last it))
+;;           revB (car it)
+;;           range (concat revA "..." revB))
+;;   (commit (setq revA (concat (magit-section-value it) "^")
+;;                 revB (magit-section-value it)))
+;;   (branch (let ((current (magit-get-current-branch))
+;;                 (atpoint (magit-section-value it)))
+;;             (if (and atpoint (equal atpoint current))
+;;                 (setq revA current
+;;                       revB atpoint
+;;                       range (concat revA "..." revB))
+;;               (-if-let
+;;                   (tracked (magit-get-tracked-branch atpoint))
+;;                   (setq revA tracked
+;;                         revB (or atpoint current)
+;;                         range (concat revA "..." revB))
+;;                 (setq revB (or atpoint current))))))
+
 ;;;###autoload
-(defun magit-ediff-compare (revA revB fileA fileB)
+(defun magit-ediff-compare (revA revB fileA fileB &optional dwim)
   "Compare REVA:FILEA with REVB:FILEB using Ediff.
 FILEA and FILEB have to be relative to the top directory of the
 repository.  If REVA or REVB is nil then this stands for the
@@ -152,7 +177,7 @@ working tree state."
   (interactive (cl-destructuring-bind (range revA revB)
                    (magit-ediff-compare--read-revisions
                     (--when-let (magit-region-values 'commit 'branch)
-                      (concat (car (last it)) ".." (car it))))
+                      (concat (car (last it)) "..." (car it))))
                  (nconc (list revA revB)
                         (magit-ediff-compare--read-files range revA revB))))
   (let ((conf (current-window-configuration))
@@ -251,15 +276,6 @@ mind at all, then it asks the user for a command to run."
                 (_          (setq command 'magit-ediff-stage))))
              (t
               (magit-section-case
-                (commit (setq revA (concat (magit-section-value it) "^")
-                              revB (magit-section-value it)))
-                (branch (let ((current (magit-get-current-branch))
-                              (atpoint (magit-section-value it)))
-                          (setq revA current
-                                revB (if (eq atpoint current)
-                                         (magit-get-tracked-branch)
-                                       atpoint)
-                                range (concat revA "..." revB))))
                 (unpushed (setq revA (magit-get-tracked-branch)
                                 revB (magit-get-current-branch)
                                 range (concat revA ".." revB)))
@@ -284,7 +300,8 @@ mind at all, then it asks the user for a command to run."
                  (?s "[s]tage"   'magit-ediff-stage))))
              ((eq command 'magit-ediff-compare)
               (apply 'magit-ediff-compare revA revB
-                     (magit-ediff-compare--read-files range revA revB file)))
+                     (-snoc (magit-ediff-compare--read-files range revA revB file)
+                            t)))
              (file
               (funcall command file))
              (t
