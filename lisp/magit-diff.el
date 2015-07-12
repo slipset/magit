@@ -566,9 +566,15 @@ The information can be in three forms:
    A string indicating a diff range.
 
 If no DWIM context is found, nil is returned."
-  (--if-let (magit-region-values 'commit 'branch)
-      (progn (deactivate-mark)
-             (concat (car (last it)) ".." (car it)))
+  (cond
+   ((--when-let (magit-region-values 'commit 'branch)
+      (deactivate-mark)
+      (concat (car (last it)) ".." (car it))))
+   (magit-buffer-refname
+    (cons 'commit magit-buffer-refname))
+   ((derived-mode-p 'magit-revision-mode)
+    (cons 'commit (car magit-refresh-args)))
+   (t
     (magit-section-case
       ([* unstaged] 'unstaged)
       ([* staged] 'staged)
@@ -586,7 +592,7 @@ If no DWIM context is found, nil is returned."
                       current)
                   (format "%s..%s" atpoint current))))
       (commit (cons 'commit (magit-section-value it)))
-      (stash (cons 'stash (magit-section-value it))))))
+      (stash (cons 'stash (magit-section-value it)))))))
 
 ;;;###autoload
 (defun magit-diff (range &optional args files)
