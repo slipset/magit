@@ -896,9 +896,15 @@ existing one."
 
 (defun magit-read-changed-file (rev-or-range prompt &optional default)
   (let ((files (magit-changed-files rev-or-range)))
-    (magit-completing-read
-     prompt files nil t nil 'magit-read-file-hist
-     (car (member (or default (magit-current-file)) files)))))
+    (cond
+     ((= (length files) 1)
+      (car files))
+     (files
+      (magit-completing-read
+       prompt files nil t nil 'magit-read-file-hist
+       (car (member (or default (magit-current-file)) files))))
+     (t
+      (user-error "No changed files in %s" rev-or-range)))))
 
 (defun magit-get-revision-buffer (rev file &optional create)
   (funcall (if create 'get-buffer-create 'get-buffer)
