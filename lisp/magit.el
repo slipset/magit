@@ -904,7 +904,8 @@ existing one."
        prompt files nil t nil 'magit-read-file-hist
        (car (member (or default (magit-current-file)) files))))
      (t
-      (user-error "No changed files between %s and %s" revA revB)))))
+      (user-error "No changed files between %s and %s"
+                  revA (or revB "the working tree"))))))
 
 (defun magit-get-revision-buffer (rev file &optional create)
   (funcall (if create 'get-buffer-create 'get-buffer)
