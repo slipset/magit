@@ -286,6 +286,8 @@ mind at all, then it asks the user for a command to run."
   "Show staged changes using Ediff.
 This only allows looking at the changes; to stage, unstage,
 and discard changes using Ediff, use `magit-ediff-stage'."
+  ;; TODO Extract common interactive code between unstaged and working
+  ;; tree variants.
   (interactive
    (list (let ((staged (or (magit-staged-files)
                            (user-error "No staged files")))
@@ -318,6 +320,26 @@ and discard changes using Ediff, use `magit-ediff-stage'."
   (magit-with-toplevel
     (magit-ediff-buffers
      (magit-find-file-index-noselect file t)
+     (find-file-noselect file))))
+
+;;;###autoload
+(defun magit-ediff-show-working-tree (file)
+  "Show changes between HEAD and working tree using Ediff.
+This only allows looking at the changes; to stage, unstage,
+and discard changes using Ediff, use `magit-ediff-dwim'."
+  (interactive
+   (list (let ((changed (or (magit-changed-files "HEAD")
+                            (user-error "No changed files")))
+               (current-file (magit-current-file)))
+           (if (= 1 (length changed))
+               (car changed)
+             (magit-completing-read "Show changed changes for file"
+                                    changed nil nil nil nil
+                                    (and (member current-file changed) current-file))))))
+  (magit-with-toplevel
+    (magit-ediff-buffers
+     (or (magit-get-revision-buffer "HEAD" file)
+         (magit-find-file-noselect "HEAD" file))
      (find-file-noselect file))))
 
 ;;;###autoload
