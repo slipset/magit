@@ -934,20 +934,25 @@ existing one."
 (defun magit-find-file-index-noselect (file &optional revert)
   "Read FILE from the index into a buffer and return the buffer."
   (let* ((bufname (concat file ".~{index}~"))
-         (origbuf (get-buffer bufname)))
+         (origbuf (get-buffer bufname))
+         (root (magit-toplevel))
+         (repo-file (file-relative-name (expand-file-name file) root)))
     (with-current-buffer (get-buffer-create bufname)
+      (setq default-directory root)
       (when (or (not origbuf) revert
                 (y-or-n-p (format "%s already exists; revert it? " bufname)))
         (let ((inhibit-read-only t)
               (temp (car (split-string
-                          (magit-git-string "checkout-index" "--temp" file)
+                          (or (magit-git-string "checkout-index" "--temp"
+                                                repo-file)
+                              (error "Error making temp file"))
                           "\t"))))
           (erase-buffer)
           (insert-file-contents temp nil nil nil t)
           (delete-file temp)))
       (setq magit-buffer-revision  "{index}"
             magit-buffer-refname   "{index}"
-            magit-buffer-file-name (expand-file-name file (magit-toplevel)))
+            magit-buffer-file-name (expand-file-name repo-file root))
       (let ((buffer-file-name magit-buffer-file-name))
         (normal-mode t))
       (setq buffer-read-only t)
