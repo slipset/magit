@@ -60,6 +60,7 @@ invoked using Magit."
   "Popup console for ediff commands."
   'magit-diff nil nil
   :actions '((?E "Dwim"    magit-ediff-dwim)
+             (?c "Commit"  magit-ediff-show-commit)
              (?d "Compare" magit-ediff-compare)
              (?m "Resolve" magit-ediff-resolve)
              (?s "Stage"   magit-ediff-stage)))
