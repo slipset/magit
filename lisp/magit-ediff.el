@@ -149,12 +149,12 @@ FILE has to be relative to the top directory of the repository."
 FILEA and FILEB have to be relative to the top directory of the
 repository.  If REVA or REVB is nil then this stands for the
 working tree state."
-  (interactive (cl-destructuring-bind (range revA revB)
+  (interactive (cl-destructuring-bind (revA revB)
                    (magit-ediff-compare--read-revisions
                     (--when-let (magit-region-values 'commit 'branch)
                       (concat (car (last it)) ".." (car it))))
                  (nconc (list revA revB)
-                        (magit-ediff-compare--read-files range revA revB))))
+                        (magit-ediff-compare--read-files revA revB))))
   (let ((conf (current-window-configuration))
         (bufA (if revA
                   (magit-get-revision-buffer revA fileA)
@@ -181,35 +181,35 @@ working tree state."
 
 (defun magit-ediff-compare--read-revisions (&optional arg)
   (let ((input (or arg (magit-read-range-or-commit "Compare range or commit")))
-        range revA revB)
+        revA revB)
     (if (string-match magit-range-re input)
         (progn (setq revA (or (match-string 1 input) "HEAD")
-                     revB (or (match-string 3 input) "HEAD")
-                     range (match-string 0 input))
+                     revB (or (match-string 3 input) "HEAD"))
                (when (string= (match-string 2 input) "...")
                  (setq revA (magit-git-string "merge-base" revA revB))))
-      (setq revA (concat input "^")
-            revB input
-            range (concat revA ".." revB)))
-    (list range revA revB)))
+      (setq revA input))
+    (list revA revB)))
 
-(defun magit-ediff-compare--read-files (range revA revB &optional fileB)
+(defun magit-ediff-compare--read-files (revA revB &optional fileB)
   (unless fileB
     (setq fileB (magit-read-changed-file
-                 range (if range
-                           (format "In range %s compare file" range)
-                         (format "Show changes in %s to file" revB)))))
+                 revA revB
+                 (format "File to compare between %s and %s"
+                         revA (or revB "the working tree")))))
   (list (or (car (member fileB (magit-revision-files revA)))
-            (car (rassoc fileB
-                         (cl-mapcan
-                          (lambda (elt)
-                            (setq elt (split-string (substring elt 97)))
-                            (when (nth 2 elt)
-                              (list (cons (nth 1 elt) (nth 2 elt)))))
-                          (magit-git-items
-                           "diff-tree" "-z" "-M" "HEAD^" "HEAD"))))
+            ;; TODO: Update this.
+            ;; (car (rassoc fileB
+            ;;              (cl-mapcan
+            ;;               (lambda (elt)
+            ;;                 (setq elt (split-string (substring elt 97)))
+            ;;                 (when (nth 2 elt)
+            ;;                   (list (cons (nth 1 elt) (nth 2 elt)))))
+            ;;               (magit-git-items
+            ;;                "diff-tree" "-z" "-M" "HEAD^" "HEAD"))))
             (magit-read-changed-file
-             range (format "Compare %s:%s with file in %s" revB fileB revA)))
+             revA revB
+             (format "File in %s to compare %s in %s with"
+                     revA fileB (or revB "the working tree"))))
         fileB))
 
 ;;;###autoload
@@ -227,12 +227,10 @@ mind at all, then it asks the user for a command to run."
     (hunk (save-excursion
             (goto-char (magit-section-start (magit-section-parent it)))
             (magit-ediff-dwim)))
-    ((commit branch)
-     (call-interactively 'magit-ediff-compare))
     (t
      (let ((command 'magit-ediff-compare)
            (file (magit-current-file))
-           revA revB range)
+           revA revB)
        (cond (magit-buffer-refname
               (setq revB magit-buffer-refname
                     revA (concat revB "^")))
@@ -241,10 +239,10 @@ mind at all, then it asks the user for a command to run."
                     revA (concat revB "^")))
              ((derived-mode-p 'magit-diff-mode)
               (pcase (magit-diff-type)
-                (`committed (cl-destructuring-bind (r a b)
+                (`committed (cl-destructuring-bind (a b)
                                 (magit-ediff-compare--read-revisions
                                  (car magit-refresh-args))
-                              (setq revA a revB b range r)))
+                              (setq revA a revB b)))
                 (`undefined (setq command nil))
                 (_          (setq command 'magit-ediff-stage))))
              (t
@@ -253,17 +251,18 @@ mind at all, then it asks the user for a command to run."
                               revB (magit-section-value it)))
                 (branch (let ((current (magit-get-current-branch))
                               (atpoint (magit-section-value it)))
-                          (setq revA current
-                                revB (if (eq atpoint current)
-                                         (magit-get-tracked-branch)
-                                       atpoint)
-                                range (concat revA "..." revB))))
+                          (if (equal atpoint current)
+                              (--if-let (magit-get-tracked-branch)
+                                  (setq revA (magit-git-string "merge-base"
+                                                               current it)
+                                        revB it)
+                                (setq revA current))
+                            (setq revA atpoint
+                                  revB current))))
                 (unpushed (setq revA (magit-get-tracked-branch)
-                                revB (magit-get-current-branch)
-                                range (concat revA ".." revB)))
+                                revB (magit-get-current-branch)))
                 (unpulled (setq revA (magit-get-current-branch)
-                                revB (magit-get-tracked-branch)
-                                range (concat revA ".." revB)))
+                                revB (magit-get-tracked-branch)))
                 ((staged unstaged)
                  (setq command (if (magit-anything-unmerged-p)
                                    'magit-ediff-resolve
@@ -282,7 +281,7 @@ mind at all, then it asks the user for a command to run."
                  (?s "[s]tage"   'magit-ediff-stage))))
              ((eq command 'magit-ediff-compare)
               (apply 'magit-ediff-compare revA revB
-                     (magit-ediff-compare--read-files range revA revB file)))
+                     (magit-ediff-compare--read-files revA revB file)))
              (file
               (funcall command file))
              (t
