@@ -231,7 +231,11 @@ mind at all, then it asks the user for a command to run."
      (let ((command 'magit-ediff-compare)
            (file (magit-current-file))
            revA revB)
-       (cond (magit-buffer-refname
+       (cond ((--when-let (magit-region-values 'commit 'branch)
+                (deactivate-mark)
+                (setq revA (car (last it))
+                      revB (car it))))
+             (magit-buffer-refname
               (setq revB magit-buffer-refname
                     command 'magit-ediff-show-commit))
              ((derived-mode-p 'magit-revision-mode)
