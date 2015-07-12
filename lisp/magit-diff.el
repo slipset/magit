@@ -589,7 +589,9 @@ If no DWIM context is found, nil is returned."
                 (if (equal atpoint current)
                     (--if-let (magit-get-tracked-branch)
                         (format "%s...%s" it current)
-                      current)
+                      (if (magit-anything-modified-p)
+                          current
+                        (cons 'commit current)))
                   (format "%s..%s" atpoint current))))
       (commit (cons 'commit (magit-section-value it)))
       (stash (cons 'stash (magit-section-value it)))))))
