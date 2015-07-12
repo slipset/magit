@@ -304,9 +304,14 @@ mind at all, then it asks the user for a command to run."
 This only allows looking at the changes; to stage, unstage,
 and discard changes using Ediff, use `magit-ediff-stage'."
   (interactive
-   (list (magit-completing-read "Show staged changes for file" nil
-                                (magit-tracked-files) nil nil nil
-                                (magit-current-file))))
+   (list (let ((staged (or (magit-staged-files)
+                           (user-error "No staged files")))
+               (current-file (magit-current-file)))
+           (if (= 1 (length staged))
+               (car staged)
+             (magit-completing-read "Show staged changes for file"
+                                    staged nil nil nil nil
+                                    (and (member current-file staged) current-file))))))
   (let ((conf (current-window-configuration))
         (bufA (magit-get-revision-buffer "HEAD" file))
         (bufB (get-buffer (concat file ".~{index}~"))))
@@ -329,9 +334,14 @@ and discard changes using Ediff, use `magit-ediff-stage'."
 This only allows looking at the changes; to stage, unstage,
 and discard changes using Ediff, use `magit-ediff-stage'."
   (interactive
-   (list (magit-completing-read "Show unstaged changes for file" nil
-                                (magit-tracked-files) nil nil nil
-                                (magit-current-file))))
+   (list (let ((unstaged (or (magit-modified-files)
+                             (user-error "No unstaged files")))
+               (current-file (magit-current-file)))
+           (if (= 1 (length unstaged))
+               (car unstaged)
+             (magit-completing-read "Show unstaged changes for file"
+                                    unstaged nil nil nil nil
+                                    (and (member current-file unstaged) current-file))))))
   (let ((conf (current-window-configuration))
         (bufA (get-buffer (concat file ".~{index}~")))
         (bufB (get-file-buffer file)))
