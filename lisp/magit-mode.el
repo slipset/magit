@@ -423,13 +423,15 @@ derives from Magit mode; or else use `switch-to-buffer'."
          (setq buffer (magit-mode-get-buffer-create buffer mode)))
         ((not (bufferp buffer))
          (signal 'wrong-type-argument (list 'bufferp nil))))
-  (let ((section (magit-current-section)))
-    (with-current-buffer (get-buffer-create buffer)
+  (let* ((section (magit-current-section))
+         (buffer (get-buffer-create buffer))
+         (window (get-buffer-window buffer (selected-frame))))
+    (with-current-buffer buffer
       (setq magit-previous-section section)
       (if magit-inhibit-save-previous-winconf
           (when (eq magit-inhibit-save-previous-winconf 'unset)
             (setq magit-previous-window-configuration nil))
-        (unless (get-buffer-window buffer (selected-frame))
+        (unless window
           (setq magit-previous-window-configuration
                 (current-window-configuration))))))
   (funcall (or switch-function
