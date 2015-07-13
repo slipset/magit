@@ -274,7 +274,7 @@ mind at all, then it asks the user for a command to run."
                  (?c "[c]ommit"  'magit-ediff-show-commit)
                  (?r "[r]ange"   'magit-ediff-compare)
                  (?s "[s]tage"   'magit-ediff-stage)
-                 (?v "resol[v]e" 'magit-ediff-resolve))))
+                 (?m "resolve"   'magit-ediff-resolve))))
              ((eq command 'magit-ediff-compare)
               (apply 'magit-ediff-compare revA revB
                      (magit-ediff-compare--read-files revA revB file)))
