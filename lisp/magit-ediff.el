@@ -248,14 +248,10 @@ mind at all, then it asks the user for a command to run."
            (file (magit-current-file))
            command revA revB)
        (pcase range
-         (`unstaged
+         ((or `unstaged `staged)
           (setq command (if (magit-anything-unmerged-p)
                             #'magit-ediff-resolve
-                          #'magit-ediff-show-unstaged)))
-         (`staged
-          (setq command (if (magit-anything-unmerged-p)
-                            #'magit-ediff-resolve
-                          #'magit-ediff-show-staged)))
+                          #'magit-ediff-stage)))
          (`(commit . ,value)
           (setq command #'magit-ediff-show-commit
                 revB value))
